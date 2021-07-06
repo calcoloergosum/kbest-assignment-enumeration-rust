@@ -10,7 +10,6 @@ extern crate log;
 
 #[cfg(all(feature = "nightly", test))]
 extern crate test;
-use std::io::{self, Read};
 pub mod lapjv;
 
 use lapjv::LapJV;
@@ -20,29 +19,22 @@ use num_traits::Float;
 use ordered_float::NotNan;
 use std::collections::BinaryHeap;
 
-pub fn get_dual<'a, T>(lap: &'a LapJV<T>) -> (Vec<T>, Vec<T>)
+pub fn get_dual<T>(lap: &LapJV<T>) -> (Vec<T>, Vec<T>)
 where
     T: LapJVCost,
 {
     let mut u = vec![T::zero(); lap.v.len()];
     let mut v = lap.v.to_owned();
-    for r in 0..lap.in_row.len() {
-        let c = lap.in_row[r];
-        if !lap.v[c].is_finite() {
-            v[c] = T::zero();
+    for (r, c) in lap.in_row.iter().enumerate() {
+        if !lap.v[*c].is_finite() {
+            v[*c] = T::zero();
         }
-        u[r] = lap.costs[(r, c)] - v[c];
+        u[r] = lap.costs[(r, *c)] - v[*c];
         if !u[r].is_finite() {
             u[r] = T::zero();
         }
     }
     (u, v)
-    // let mut u = vec![T::zero(); lap.v.len()];
-    // for r in 0..lap.in_row.len() {
-    //     let c = lap.in_row[r];
-    //     u[r] = lap.costs[(r, c)] - lap.v[c];
-    // }
-    // (u, lap.v.to_owned())
 }
 
 #[derive(Debug)]
@@ -194,7 +186,12 @@ where
         }
     }
 
-    let value: T = lapjv.in_row.iter().enumerate().map(|(i, j)| costs[(i, *j)]).fold(T::zero(), |x, y| {x + y});
+    let value: T = lapjv
+        .in_row
+        .iter()
+        .enumerate()
+        .map(|(i, j)| costs[(i, *j)])
+        .fold(T::zero(), |x, y| x + y);
     if !value.is_finite() {
         return Err(KBestEnumerationError::InfeasibleMatrix);
     };

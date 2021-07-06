@@ -42,7 +42,7 @@ where
     T: LapJVCost,
 {
     let mut lapjv = LapJV::new(costs);
-    lapjv.solve();
+    lapjv.solve()?;
     Ok((lapjv.in_row, lapjv.in_col))
 }
 
