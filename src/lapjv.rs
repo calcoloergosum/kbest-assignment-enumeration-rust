@@ -395,7 +395,6 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rand;
 
     #[test]
     fn it_works() {
@@ -529,7 +528,7 @@ mod tests {
     fn test_find_umins() {
         let m = Matrix::from_shape_vec((3, 3), vec![25.0, 0.0, 15.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0])
             .unwrap();
-        let result = find_umins_plain(m.row(0), &vec![0.0, 0.0, 0.0]);
+        let result = find_umins_plain(m.row(0), &[0.0, 0.0, 0.0]);
         println!("Result: {:?}", result);
         assert_eq!(result, (0.0, 15.0, 1, Some(2)));
     }

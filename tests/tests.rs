@@ -49,7 +49,7 @@ mod tests {
     #[test]
     fn test_get_dual() {
         let size = 5;
-        let costs = Array::random((size, size), Uniform::new(1. as f64, 10.));
+        let costs = Array::random((size, size), Uniform::new(1_f64, 10.));
         let mut lap = LapJV::new(&costs);
         match lap.solve() {
             Err(_) => panic!("test failed"),
@@ -71,10 +71,10 @@ mod tests {
         // the answers should be
         // 123, 132, 213, 231, 312, 321
         let data = iproduct![0..size, 1..(size + 1)]
-            .map(|(i, j)| (j as f64) * (10 as f64).powi(i as i32))
+            .map(|(i, j)| (j as f64) * (10_f64).powi(i as i32))
             .collect::<Vec<_>>();
         let costs = ndarray::Array2::from_shape_vec((size, size), data).unwrap();
-        let factorial = (1..(size + 1)).fold(1, |x, y| x * y);
+        let factorial: usize = (1..(size + 1)).product();
         // solution count
         let mut kbest = KBestEnumeration::new(costs.clone()).unwrap();
         let mut solutions = vec![];
