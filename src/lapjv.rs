@@ -215,7 +215,7 @@ where
         let dim = self.dim;
         let mut pred = vec![0; dim];
 
-        let free_rows = std::mem::replace(&mut self.free_rows, vec![]);
+        let free_rows = std::mem::take(&mut self.free_rows);
         for freerow in free_rows {
             trace!("looking at freerow={}", freerow);
 
@@ -249,10 +249,10 @@ where
 
         // Dijkstra shortest path algorithm.
         // runs until unassigned column added to shortest path tree.
-        for i in 0..dim {
+        for (i, p) in pred.iter_mut().enumerate().take(dim) {
             collist.push(i);
             d.push(self.reduced_cost(start_i, i));
-            pred[i] = start_i;
+            *p = start_i;
         }
 
         trace!("d: {:?}", d);
@@ -306,6 +306,7 @@ where
             let mind = d[j];
             let h = self.reduced_cost(i, j) - mind;
             // For all columns in TODO
+            let mut _hi = hi;
             for k in hi..collist.len() {
                 let j = collist[k];
                 let cred_ij = self.reduced_cost(i, j) - h;
@@ -317,12 +318,13 @@ where
                         if self.in_col[j] == std::usize::MAX {
                             return Some(j);
                         }
-                        collist[k] = collist[hi];
-                        collist[hi] = j;
-                        hi += 1;
+                        collist[k] = collist[_hi];
+                        collist[_hi] = j;
+                        _hi += 1;
                     }
                 }
             }
+            hi = _hi;
         }
         // Note: only change lo and hi if the item was not found
         *plo = lo;
@@ -347,7 +349,7 @@ where
 {
     let mut hi = lo + 1;
     let mut mind = d[collist[lo]];
-    for k in hi..dim {
+    for k in (lo + 1)..dim {
         let j = collist[k];
         let h = d[j];
         if h <= mind {
@@ -409,7 +411,12 @@ mod tests {
     fn test_solve_random10() {
         let (m, result) = solve_random10();
         let cost = cost(&m, &result.0);
-        assert_eq!(cost, 1071.0);
+        assert!(approx_eq!(
+            f64,
+            cost,
+            1071.0_f64,
+            epsilon = f32::epsilon().into()
+        ));
         assert_eq!(result.0, vec![7, 9, 3, 4, 1, 0, 5, 6, 2, 8]);
     }
 
@@ -520,7 +527,12 @@ mod tests {
         let m = Matrix::from_shape_vec((10, 10), c).unwrap();
         let result = lapjv(&m).unwrap();
         let cost = cost(&m, &result.0);
-        assert_eq!(cost, 1403.0);
+        assert!(approx_eq!(
+            f64,
+            cost,
+            1403.0_f64,
+            epsilon = f32::epsilon().into()
+        ));
         assert_eq!(result.0, vec![7, 9, 3, 8, 1, 4, 5, 6, 2, 0]);
     }
 

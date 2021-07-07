@@ -6,7 +6,10 @@ on:
       - main
   pull_request:
     branches:
-      - "**"
+      - main
+
+env:
+  CARGO_TERM_COLOR: always
 
 jobs:
   doc:
@@ -57,10 +60,13 @@ jobs:
         with:
           toolchain: ${{ matrix.rust }}
 
-      - name: Test cameleon
-        run: cargo test --workspace --all-targets --all-features
+      - name: Build
+        run: cargo build --verbose
+
+      - name: Test
+        run: cargo test --workspace --all-targets --all-features --verbose
 
       # NOTE: --all-targets option doesn't invoke doctest, see https://github.com/rust-lang/cargo/issues/6669.
-      - name: Doctest cameleon
-        run: cargo test --workspace --all-features --doc
+      - name: Doctest
+        run: cargo test --workspace --all-features --doc --verbose
   
