@@ -7,6 +7,9 @@ extern crate num_traits;
 extern crate rand;
 #[macro_use]
 extern crate log;
+#[macro_use]
+#[cfg(test)]
+extern crate float_cmp;
 
 #[cfg(all(feature = "nightly", test))]
 extern crate test;
