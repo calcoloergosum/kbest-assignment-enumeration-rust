@@ -1,22 +1,72 @@
-name: Rust
+name: CI
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - main
   pull_request:
-    branches: [ main ]
+    branches:
+      - main
 
 env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  build:
-
+  doc:
+    name: Doc
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v2
-    - name: Build
-      run: cargo build --verbose
-    - name: Run tests
-      run: cargo test --verbose
+      - uses: actions/checkout@v2
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+
+      - run: cargo doc --no-deps
+
+  lint:
+    name: Rustfmt and clippy
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+
+      - name: Rustfmt
+        run: cargo fmt --all -- --check
+
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets --all-features
+
+  test:
+    name: Test
+    defaults:
+      run:
+        shell: bash
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os:
+          - ubuntu-latest
+          - macos-latest
+        rust:
+          - stable
+
+    steps:
+      - uses: actions/checkout@v2
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: ${{ matrix.rust }}
+
+      - name: Build
+        run: cargo build --verbose
+
+      - name: Test
+        run: cargo test --workspace --all-targets --all-features --verbose
+
+      # NOTE: --all-targets option doesn't invoke doctest, see https://github.com/rust-lang/cargo/issues/6669.
+      - name: Doctest
+        run: cargo test --workspace --all-features --doc --verbose
+  
