@@ -338,20 +338,12 @@ mod tests {
         let costs = ndarray::Array2::from_shape_vec((size, size), data).unwrap();
         let factorial: usize = (1..(size + 1)).product();
         // solution count
-        let mut kbest = KBestEnumeration::new(costs.clone()).unwrap();
+        let kbest = KBestEnumeration::new(costs.clone()).unwrap();
         let mut solutions = vec![];
-        for _ in 0..(factorial + 1) {
-            match kbest.next() {
-                None => break,
-                Some(a_solution) => {
-                    solutions.push(a_solution);
-                }
-            };
+        for s in kbest {
+            solutions.push(s);
         }
-        // let solutions = KBestEnumeration::new(costs)
-        //     .iter()
-        //     .collect::<Vec<State<f64>>>();
-        // assert_eq!(solutions.len(), factorial);
+        assert_eq!(solutions.len(), factorial);
 
         // solution sort
         let mut solutions_sorted = solutions.clone();
