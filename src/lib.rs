@@ -15,9 +15,7 @@ extern crate float_cmp;
 extern crate test;
 pub mod lapjv;
 
-use lapjv::LapJV;
-use lapjv::LapJVCost;
-use lapjv::Matrix;
+use lapjv::{LapJV, LapJVCost, LapJVError, Matrix};
 use num_traits::Float;
 use ordered_float::NotNan;
 use std::collections::BinaryHeap;
@@ -43,7 +41,15 @@ where
 #[derive(Debug)]
 pub enum KBestEnumerationError {
     InfeasibleMatrix,
+    InternalError(&'static str),
 }
+
+impl From<LapJVError> for KBestEnumerationError {
+    fn from(err: LapJVError) -> Self {
+        KBestEnumerationError::InternalError(err.0)
+    }
+}
+
 pub type Solution = (Vec<usize>, Vec<usize>);
 
 #[derive(Clone, Debug)]
@@ -169,10 +175,7 @@ where
         }
     }
     let mut lapjv = LapJV::new(costs);
-    let err = lapjv.solve();
-    if err.is_err() {
-        return Err(KBestEnumerationError::InfeasibleMatrix);
-    }
+    lapjv.solve()?;
 
     let (u, v) = get_dual(&lapjv);
 
@@ -335,24 +338,15 @@ mod tests {
         let costs = ndarray::Array2::from_shape_vec((size, size), data).unwrap();
         let factorial: usize = (1..(size + 1)).product();
         // solution count
-        let mut kbest = KBestEnumeration::new(costs.clone()).unwrap();
+        let kbest = KBestEnumeration::new(costs.clone()).unwrap();
         let mut solutions = vec![];
-        for _ in 0..(factorial + 1) {
-            match kbest.next() {
-                None => break,
-                Some(a_solution) => {
-                    solutions.push(a_solution);
-                }
-            };
+        for s in kbest {
+            solutions.push(s);
         }
-        // let solutions = KBestEnumeration::new(costs)
-        //     .iter()
-        //     .collect::<Vec<State<f64>>>();
-        // assert_eq!(solutions.len(), factorial);
+        assert_eq!(solutions.len(), factorial);
 
         // solution sort
         let mut solutions_sorted = solutions.clone();
-        solutions_sorted.sort();
         solutions_sorted.sort_by(|a, b| b.partial_cmp(a).unwrap_or(std::cmp::Ordering::Equal));
         assert_eq!(solutions_sorted, solutions);
 

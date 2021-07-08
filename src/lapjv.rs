@@ -9,7 +9,7 @@ pub trait LapJVCost: Float + ops::AddAssign + ops::SubAssign + std::fmt::Debug {
 impl<T> LapJVCost for T where T: Float + ops::AddAssign + ops::SubAssign + std::fmt::Debug {}
 
 #[derive(Debug)]
-pub struct LapJVError(&'static str);
+pub struct LapJVError(pub &'static str);
 
 impl std::fmt::Display for LapJVError {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
