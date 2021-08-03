@@ -1,7 +1,7 @@
 # kbest-assignment-enumeration-rust
 
 Minimum cost k-best perfect matching.
-Assignment problem code is borrowed from [lapjv-rust](https://github.com/Antti/lapjv-rust/), thus affected by their license.
+Finding initial solution part of the code is borrowed from [lapjv-rust](https://github.com/Antti/lapjv-rust/), thus affected by their license.
 
 
 ## Reference
