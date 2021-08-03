@@ -69,4 +69,17 @@ jobs:
       # NOTE: --all-targets option doesn't invoke doctest, see https://github.com/rust-lang/cargo/issues/6669.
       - name: Doctest
         run: cargo test --workspace --all-features --doc --verbose
-  
+
+      - name: Build
+        run: cargo build --verbose --release
+        if: contains(github.ref, 'tags/v')
+
+      - name: Upload wheel to release
+        if: contains(github.ref, 'tags/v')
+        uses: svenstaro/upload-release-action@v1-release
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: target/release/libkbest*
+          tag: ${{ github.ref }}
+          overwrite: true
+          file_glob: true
