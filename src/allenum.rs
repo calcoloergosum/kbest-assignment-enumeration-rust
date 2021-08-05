@@ -1,4 +1,4 @@
-use crate::kbest::{KBestEnumeration, Solution, State};
+use crate::kbest::{KBestMatchingIterator, Solution, State};
 use all_lap_rust::bipartite::{BipartiteGraph, Matching, MaximumMatchingsIterator, Node};
 use all_lap_rust::contains::Contains;
 use float_cmp::ApproxEq;
@@ -41,41 +41,26 @@ where
     }
 }
 
-pub struct AllEnumeration<'a, T> {
-    kbest_enum: KBestEnumeration<f64>,
+pub struct SortedMatchingIterator<'a, T> {
+    kbest_enum: KBestMatchingIterator<f64>,
     current_state_iter: Option<MaximumMatchingsIterator<'a, T>>,
     allowed_start_nodes: &'a T,
 }
 
-impl<'a, T> AllEnumeration<'a, T> {
-    pub fn new(kbest_enum: KBestEnumeration<f64>, allowed_start_nodes: &'a T) -> Self {
+impl<'a, T> SortedMatchingIterator<'a, T> {
+    pub fn new(kbest_enum: KBestMatchingIterator<f64>, allowed_start_nodes: &'a T) -> Self {
         Self {
             kbest_enum,
             current_state_iter: None,
             allowed_start_nodes,
         }
     }
-    // pub fn iter_matchings<'b>(&'a mut self) -> impl Iterator<Item = Matching> + 'b
-    // where
-    //     'a: 'b,
-    //     State<f64>: Ord,
-    //     KBestEnumeration<f64>: Iterator,
-    //     T: Contains<Node> + Contains<usize>,
-    // {
-    //     let allowed = self.allowed_start_nodes;
-    //     self.kbest_enum.flat_map(|s| {
-    //         let nrows = s.costs_reduced.nrows();
-    //         let (graph, matching): (BipartiteGraph, Matching) = s.into();
-    //         let digraph = graph.as_directed(&matching);
-    //         MaximumMatchingsIterator::new(graph, matching, digraph, allowed)
-    //     })
-    // }
 }
 
-impl<'a, T> Iterator for AllEnumeration<'a, T>
+impl<'a, T> Iterator for SortedMatchingIterator<'a, T>
 where
     State<f64>: Ord,
-    KBestEnumeration<f64>: Iterator,
+    KBestMatchingIterator<f64>: Iterator,
     T: Contains<Node> + Contains<usize>,
 {
     type Item = Matching;
@@ -104,8 +89,8 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::AllEnumeration;
-    use crate::kbest::KBestEnumeration;
+    use super::SortedMatchingIterator;
+    use crate::kbest::KBestMatchingIterator;
     use all_lap_rust::bipartite::{Node, NodeGroup, NodeSet};
     use ndarray::array;
     use std::iter::FromIterator;
@@ -113,7 +98,7 @@ mod tests {
     #[test]
     fn test_simple_enumeration() {
         let costs = array![[1., 1.], [1., 1.]];
-        let kbest = KBestEnumeration::new(costs.clone()).unwrap();
+        let kbest = KBestMatchingIterator::new(costs.clone()).unwrap();
         let allowed_start_nodes = NodeSet::new(
             std::collections::HashSet::from_iter(
                 std::iter::repeat(NodeGroup::Left)
@@ -123,7 +108,7 @@ mod tests {
             ),
             2,
         );
-        let allenum = AllEnumeration::new(kbest, &allowed_start_nodes);
+        let allenum = SortedMatchingIterator::new(kbest, &allowed_start_nodes);
         let matchings: Vec<_> = allenum.collect();
         let mut cur_cost = 0.;
         for m in matchings.iter() {
@@ -165,8 +150,8 @@ mod tests {
             ),
             size,
         );
-        let kbest = KBestEnumeration::new(costs.clone()).unwrap();
-        let allenum = AllEnumeration::new(kbest, &allowed_start_nodes);
+        let kbest = KBestMatchingIterator::new(costs.clone()).unwrap();
+        let allenum = SortedMatchingIterator::new(kbest, &allowed_start_nodes);
         let matchings: Vec<_> = allenum.collect();
 
         // Assert cost ascending order
