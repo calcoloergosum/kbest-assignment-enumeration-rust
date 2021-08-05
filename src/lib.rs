@@ -1,20 +1,29 @@
-#![cfg_attr(all(feature = "nightly", test), feature(test))]
-#[macro_use]
-extern crate itertools;
 extern crate ndarray;
 extern crate num_traits;
 
-#[cfg_attr(test, macro_use)]
-extern crate float_cmp;
+#[macro_use]
+extern crate itertools;
 
-#[cfg(test)]
-extern crate rand;
+// required by lapjv
 #[macro_use]
 extern crate log;
 
+// First parties
 extern crate all_lap_rust;
+
+// Crates required by test
+#[cfg_attr(test, macro_use)]
+extern crate float_cmp;
+#[cfg(test)]
+extern crate rand;
 #[cfg(all(feature = "nightly", test))]
 extern crate test;
-pub mod allenum;
-pub mod kbest;
-pub mod lapjv;
+
+mod allenum;
+mod kbest;
+mod lapjv;
+mod util;
+
+pub use allenum::*;
+pub use kbest::*;
+pub use util::*;

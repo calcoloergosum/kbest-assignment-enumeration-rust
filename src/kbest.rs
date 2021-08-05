@@ -82,12 +82,12 @@ where
     }
 }
 
-pub struct KBestEnumeration<T> {
+pub struct KBestMatchingIterator<T> {
     heap: BinaryHeap<State<T>>,
     last: Option<State<T>>,
 }
 
-impl<T> KBestEnumeration<T> {
+impl<T> KBestMatchingIterator<T> {
     pub fn new(cost_mat: Matrix<T>) -> Result<Self, KBestEnumerationError>
     where
         T: LapJVCost + From<f32>,
@@ -101,11 +101,11 @@ impl<T> KBestEnumeration<T> {
         // # to be able to avoid overlapping value in the heap
         let mut heap = BinaryHeap::new();
         heap.push(state);
-        Ok(KBestEnumeration { heap, last: None })
+        Ok(KBestMatchingIterator { heap, last: None })
     }
 }
 
-impl<T> Iterator for KBestEnumeration<T>
+impl<T> Iterator for KBestMatchingIterator<T>
 where
     State<T>: Ord,
     T: LapJVCost + From<f32>,
@@ -245,7 +245,7 @@ mod tests {
     extern crate ndarray_rand;
     extern crate ordered_float;
 
-    use super::{get_dual, KBestEnumeration};
+    use super::{get_dual, KBestMatchingIterator};
     use crate::lapjv::LapJV;
     // use all_lap_rust::bipartite::BipartiteGraph;
     use itertools::Itertools;
@@ -317,7 +317,7 @@ mod tests {
         let costs = ndarray::Array2::from_shape_vec((size, size), data).unwrap();
         let factorial: usize = (1..(size + 1)).product();
         // solution count
-        let kbest = KBestEnumeration::new(costs.clone()).unwrap();
+        let kbest = KBestMatchingIterator::new(costs.clone()).unwrap();
         let mut solutions = vec![];
         for s in kbest {
             solutions.push(s);
@@ -368,7 +368,7 @@ mod tests {
         let costs = ndarray::Array2::from_shape_vec((size, size), data).unwrap();
         let factorial: usize = (1..(size + 1)).product();
         // solution count
-        let kbest = KBestEnumeration::new(costs.clone()).unwrap();
+        let kbest = KBestMatchingIterator::new(costs).unwrap();
         let mut solutions = vec![];
         for s in kbest {
             solutions.push(s);

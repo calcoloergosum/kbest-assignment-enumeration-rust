@@ -1,6 +1,6 @@
 [package]
 name = "kbest-lap"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["Jaeseung Han <thestudentofkyoto@gmail.com>"]
 edition = "2018"
 
@@ -8,13 +8,12 @@ edition = "2018"
 
 [dependencies]
 ndarray = "0.15.3"
-# lapjv = "0.2.0"
 num-traits = "0.2.14"
 rand = "0.8.4"
 log = "0.4.14"
 ordered-float = "2.5.1"
 itertools = "0.8.2"
-all-lap-rust = { git = "https://github.com/studentofkyoto/all-lap-rust/", branch = "main" }
+all-lap-rust = { git = "https://github.com/studentofkyoto/all-lap-rust/", tag = "v0.1.1" }
 float-cmp = "0.8.0"
 
 [dev-dependencies]

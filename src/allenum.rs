@@ -1,8 +1,11 @@
-use crate::kbest::{KBestEnumeration, Solution, State};
-use all_lap_rust::bipartite::{BipartiteGraph, Matching, MaximumMatchingsIterator, Node};
+use crate::kbest::{KBestMatchingIterator, Solution, State};
+use crate::lapjv::Matrix;
+use all_lap_rust::bipartite::{BipartiteGraph, MaximumMatchingCalculator, Node};
 use all_lap_rust::contains::Contains;
 use float_cmp::ApproxEq;
 use num_traits::Float;
+
+pub type Matching = all_lap_rust::bipartite::Matching;
 
 fn solution_sparse_to_dense(s: Solution, lsize: usize) -> Matching {
     let mut l2r = std::iter::repeat(None).take(lsize).collect::<Vec<_>>();
@@ -41,58 +44,37 @@ where
     }
 }
 
-pub struct AllEnumeration<'a, T> {
-    kbest_enum: KBestEnumeration<f64>,
-    current_state_iter: Option<MaximumMatchingsIterator<'a, T>>,
-    allowed_start_nodes: &'a T,
+pub struct SortedMatchingCalculator {
+    kbest_enum: KBestMatchingIterator<f64>,
+    current_state_iter: Option<MaximumMatchingCalculator>,
 }
 
-impl<'a, T> AllEnumeration<'a, T> {
-    pub fn new(kbest_enum: KBestEnumeration<f64>, allowed_start_nodes: &'a T) -> Self {
+impl SortedMatchingCalculator {
+    pub fn new(kbest_enum: KBestMatchingIterator<f64>) -> Self {
         Self {
             kbest_enum,
-            current_state_iter: None,
-            allowed_start_nodes,
+            current_state_iter: None as Option<MaximumMatchingCalculator>,
         }
     }
-    // pub fn iter_matchings<'b>(&'a mut self) -> impl Iterator<Item = Matching> + 'b
-    // where
-    //     'a: 'b,
-    //     State<f64>: Ord,
-    //     KBestEnumeration<f64>: Iterator,
-    //     T: Contains<Node> + Contains<usize>,
-    // {
-    //     let allowed = self.allowed_start_nodes;
-    //     self.kbest_enum.flat_map(|s| {
-    //         let nrows = s.costs_reduced.nrows();
-    //         let (graph, matching): (BipartiteGraph, Matching) = s.into();
-    //         let digraph = graph.as_directed(&matching);
-    //         MaximumMatchingsIterator::new(graph, matching, digraph, allowed)
-    //     })
-    // }
-}
 
-impl<'a, T> Iterator for AllEnumeration<'a, T>
-where
-    State<f64>: Ord,
-    KBestEnumeration<f64>: Iterator,
-    T: Contains<Node> + Contains<usize>,
-{
-    type Item = Matching;
-    fn next(&mut self) -> Option<Self::Item> {
-        let allowed = self.allowed_start_nodes;
-
+    pub fn next_item(
+        &mut self,
+        allowed_start_nodes: &'_ (impl Contains<Node> + Contains<usize>),
+    ) -> Option<Matching> {
         loop {
             if self.current_state_iter.is_none() {
                 let s = self.kbest_enum.next()?;
                 let (graph, matching): (BipartiteGraph, Matching) = s.into();
                 let digraph = graph.as_directed(&matching);
                 self.current_state_iter =
-                    MaximumMatchingsIterator::new(graph, matching, digraph, allowed).into();
+                    MaximumMatchingCalculator::new(graph, matching, digraph).into();
                 continue;
             }
-            let iterator = self.current_state_iter.as_mut().unwrap();
-            let next = iterator.next();
+            let next = self
+                .current_state_iter
+                .as_mut()
+                .unwrap()
+                .next_item(allowed_start_nodes);
             if next.is_none() {
                 self.current_state_iter = None;
                 continue;
@@ -100,31 +82,52 @@ where
             return next;
         }
     }
+
+    pub fn iter_match<T>(self, allowed_start_nodes: &'_ T) -> impl Iterator<Item = Matching> + '_
+    where
+        T: Contains<usize> + Contains<Node>,
+    {
+        SortedMatchingIterator {
+            inner: self,
+            allowed_start_nodes,
+        }
+    }
+
+    pub fn from_costs(costs: Matrix<f64>) -> Self {
+        let kbest = KBestMatchingIterator::new(costs).unwrap();
+        Self::new(kbest)
+    }
+}
+
+struct SortedMatchingIterator<'a, T> {
+    inner: SortedMatchingCalculator,
+    allowed_start_nodes: &'a T,
+}
+
+impl<'a, T> Iterator for SortedMatchingIterator<'a, T>
+where
+    T: Contains<usize> + Contains<Node>,
+{
+    type Item = Matching;
+    fn next(&mut self) -> Option<Matching> {
+        self.inner.next_item(self.allowed_start_nodes)
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::AllEnumeration;
-    use crate::kbest::KBestEnumeration;
-    use all_lap_rust::bipartite::{Node, NodeGroup, NodeSet};
+    use super::SortedMatchingCalculator;
+    use crate::util::make_valid_nodeset;
     use ndarray::array;
-    use std::iter::FromIterator;
+    use num_traits::float::Float;
 
     #[test]
     fn test_simple_enumeration() {
         let costs = array![[1., 1.], [1., 1.]];
-        let kbest = KBestEnumeration::new(costs.clone()).unwrap();
-        let allowed_start_nodes = NodeSet::new(
-            std::collections::HashSet::from_iter(
-                std::iter::repeat(NodeGroup::Left)
-                    .zip(0..2)
-                    .chain(std::iter::repeat(NodeGroup::Right).zip(0..2))
-                    .map(|(lr, i)| Node::new(lr, i)),
-            ),
-            2,
-        );
-        let allenum = AllEnumeration::new(kbest, &allowed_start_nodes);
-        let matchings: Vec<_> = allenum.collect();
+        let allowed_start_nodes = make_valid_nodeset(2, 2, 2);
+        let matchings: Vec<_> = SortedMatchingCalculator::from_costs(costs.clone())
+            .iter_match(&allowed_start_nodes)
+            .collect();
         let mut cur_cost = 0.;
         for m in matchings.iter() {
             let mut cost = 0.;
@@ -136,6 +139,50 @@ mod tests {
             cur_cost = cost;
         }
         assert_eq!(matchings.len(), 2);
+    }
+
+    #[test]
+    fn test_simple_enumeration_with_exclusion() {
+        // Imagine there is a detection system.
+        // The detection system can overdetect, or underdetect (fail to recall).
+        // Let's say we know the number of items to be detected: N_gt (ground truth)
+        // And we ran the detection system, and some items were detected: N_ob (observed)
+        //               N_ob                     N_gt (dummy)
+        //
+        //    N_gt   (recall cost)           (underdetection cost)
+        //
+        //    N_ob   (overdetection cost)            zeros
+        //  (dummy)
+        //
+        // And we enumerate all the possible cases of detection system's behavior.
+
+        // In case where 2 items are expected with 2 detection results,
+        let inf = f64::infinity();
+        let costs = array![
+            // ob1  ob2    (gt1) (gt2)  Observation \ Ground Truth
+            [1.0, 2.0, 1e3, inf,], // gt1
+            [10., 20., inf, 1e3,], // gt2
+            [1e2, inf, 0.0, 0.0,], // (ob1)
+            [inf, 1e2, 0.0, 0.0,], // (ob2)
+        ];
+        // Possible perfect recall case: (12, 21)
+        // either one is recalled:  (1100 + (1, 2, 10, 20))
+        // Both items were not detected: (2200)
+        let allowed_start_nodes = make_valid_nodeset(2, 2, 4);
+        let matchings: Vec<_> = SortedMatchingCalculator::from_costs(costs.clone())
+            .iter_match(&allowed_start_nodes)
+            .collect();
+        let mut cur_cost = 0.;
+        for m in matchings.iter() {
+            let mut cost = 0.;
+            for (l, r) in m.iter_pairs() {
+                cost += costs[(l, r)];
+            }
+            println!("{:#?}", cost);
+            assert!(cur_cost <= cost);
+            cur_cost = cost;
+        }
+        assert_eq!(matchings.len(), 2 + 4 + 1);
     }
 
     #[test]
@@ -156,18 +203,10 @@ mod tests {
         let costs = ndarray::Array2::from_shape_vec((size, size), data).unwrap();
         let factorial: usize = (1..(size + 1)).product();
         // solution count
-        let allowed_start_nodes = NodeSet::new(
-            std::collections::HashSet::from_iter(
-                std::iter::repeat(NodeGroup::Left)
-                    .zip(0..size)
-                    .chain(std::iter::repeat(NodeGroup::Right).zip(0..size))
-                    .map(|(lr, i)| Node::new(lr, i)),
-            ),
-            size,
-        );
-        let kbest = KBestEnumeration::new(costs.clone()).unwrap();
-        let allenum = AllEnumeration::new(kbest, &allowed_start_nodes);
-        let matchings: Vec<_> = allenum.collect();
+        let allowed_start_nodes = make_valid_nodeset(size, size, size);
+        let matchings: Vec<_> = SortedMatchingCalculator::from_costs(costs.clone())
+            .iter_match(&allowed_start_nodes)
+            .collect();
 
         // Assert cost ascending order
         let mut cur_cost = 0.;
