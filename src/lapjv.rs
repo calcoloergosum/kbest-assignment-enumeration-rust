@@ -37,28 +37,6 @@ pub struct LapJV<'a, T: 'a> {
 /// R. Jonker, A. Volgenant. A Shortest Augmenting Path Algorithm for
 /// Dense and Sparse Linear Assignment Problems. Computing 38, 325-340
 /// (1987)
-pub fn lapjv<T>(costs: &Matrix<T>) -> Result<(Vec<usize>, Vec<usize>), LapJVError>
-where
-    T: LapJVCost,
-{
-    let mut lapjv = LapJV::new(costs);
-    lapjv.solve()?;
-    Ok((lapjv.in_row, lapjv.in_col))
-}
-
-/// Calculate solution cost by a result row
-pub fn cost<T>(input: &Matrix<T>, row: &[usize]) -> T
-where
-    T: LapJVCost,
-{
-    (0..row.len()).fold(T::zero(), |acc, i| acc + input[(i, row[i])])
-}
-
-/// Solve LAP problem given cost matrix
-/// This is an implementation of the LAPJV algorithm described in:
-/// R. Jonker, A. Volgenant. A Shortest Augmenting Path Algorithm for
-/// Dense and Sparse Linear Assignment Problems. Computing 38, 325-340
-/// (1987)
 impl<'a, T> LapJV<'a, T>
 where
     T: LapJVCost,
@@ -398,6 +376,21 @@ where
 mod tests {
     use super::*;
 
+    fn cost<T>(input: &Matrix<T>, row: &[usize]) -> T
+    where
+        T: LapJVCost,
+    {
+        (0..row.len()).fold(T::zero(), |acc, i| acc + input[(i, row[i])])
+    }
+
+    fn lapjv<T>(costs: &Matrix<T>) -> Result<(Vec<usize>, Vec<usize>), LapJVError>
+    where
+        T: LapJVCost,
+    {
+        let mut lapjv = LapJV::new(costs);
+        lapjv.solve()?;
+        Ok((lapjv.in_row, lapjv.in_col))
+    }
     #[test]
     fn it_works() {
         let m = Matrix::from_shape_vec((3, 3), vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0])

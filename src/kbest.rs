@@ -368,7 +368,7 @@ mod tests {
         let costs = ndarray::Array2::from_shape_vec((size, size), data).unwrap();
         let factorial: usize = (1..(size + 1)).product();
         // solution count
-        let kbest = KBestMatchingIterator::new(costs.clone()).unwrap();
+        let kbest = KBestMatchingIterator::new(costs).unwrap();
         let mut solutions = vec![];
         for s in kbest {
             solutions.push(s);
